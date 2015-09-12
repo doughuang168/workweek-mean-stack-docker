@@ -1,0 +1,65 @@
+FROM doughuang168/workweek-base
+ENV NODE_VERSION 0.12.3
+ENV NPM_VERSION 2.10.0
+
+
+ENV NODEJS_PORT 80
+ENV DB_PORT     27017
+ENV DB_USERNAME workweek_user
+ENV DB_PASSWORD workweek_user
+ENV APP_NAME    workweek
+
+### using env w/o touching original server.js code
+ENV OPENSHIFT_MONGODB_DB_USERNAME $DB_USERNAME
+ENV OPENSHIFT_MONGODB_DB_PASSWORD $DB_PASSWORD
+ENV OPENSHIFT_APP_NAME 		  $APP_NAME
+ENV OPENSHIFT_MONGODB_DB_HOST     $HOSTNAME
+ENV OPENSHIFT_MONGODB_DB_PORT     $DB_PORT
+ENV OPENSHIFT_NODEJS_PORT         $NODEJS_PORT
+
+RUN curl -SLO "http://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-x64.tar.gz" \
+        && tar -xzf "node-v$NODE_VERSION-linux-x64.tar.gz" -C /usr/local --strip-components=1 \
+        && npm install -g npm@"$NPM_VERSION" \
+        && npm cache clear \
+        && apt-get update \
+        && apt-get -y install supervisor build-essential
+
+COPY supervisor.conf /etc/supervisor.conf
+
+RUN  cd /opt/workweek
+RUN  npm install -g winston
+RUN  npm install -g mongodb
+RUN  npm install -g promise-es6
+
+#Solve node.js mongodb driver version issue
+RUN  echo "export NODE_PATH=$NODE_PATH:/usr/local/lib/node_modules" >  /home/workweek-user/go.sh                                                                                             
+RUN  echo "cd /opt/workweek"                                        >> /home/workweek-user/go.sh 
+RUN  echo "npm install mongodb@~1.4 --save"                         >> /home/workweek-user/go.sh  
+RUN  echo "npm install"                                             >> /home/workweek-user/go.sh 
+RUN  chmod +x /home/workweek-user/go.sh
+RUN  /home/workweek-user/go.sh
+
+RUN  echo "#!/bin/bash                  "               > /home/workweek-user/start-mongo.sh
+RUN  echo "cd /opt                      "               >>/home/workweek-user/start-mongo.sh
+RUN  echo "/usr/local/bin/mongod --smallfiles & "       >>/home/workweek-user/start-mongo.sh
+RUN  echo "sleep 20                     "               >>/home/workweek-user/start-mongo.sh
+RUN  echo "cd /home/workweek-user       "               >>/home/workweek-user/start-mongo.sh
+RUN  echo "export OPENSHIFT_MONGODB_DB_HOST=localhost"  >>/home/workweek-user/start-mongo.sh
+RUN  echo "/usr/local/bin/mongoimport -d workweek -c workweek --type json ww_import.json "                                                  >> /home/workweek-user/start-mongo.sh
+RUN  echo "echo 'db.addUser( {user: \"$DB_USERNAME\", pwd: \"$DB_PASSWORD\", roles: [ \"readWrite\", \"dbAdmin\" ]} );' | mongo admin "     >> /home/workweek-user/start-mongo.sh
+RUN  echo "sleep 10                     "          >>/home/workweek-user/start-mongo.sh
+RUN  echo "echo 'db.addUser( {user: \"$DB_USERNAME\", pwd: \"$DB_PASSWORD\", roles: [ \"readWrite\", \"dbAdmin\" ]} );' | mongo $APP_NAME " >> /home/workweek-user/start-mongo.sh
+RUN  echo "sleep 10                     "          >>/home/workweek-user/start-mongo.sh
+RUN  echo "if [ -f \"/data/db/workweek.ns\" ]                                             " >>/home/workweek-user/start-mongo.sh
+RUN  echo "then                                                                           " >>/home/workweek-user/start-mongo.sh 
+RUN  echo "        echo \"/data/db/workweek.ns exist.\" > /home/workweek-user/log.txt     " >>/home/workweek-user/start-mongo.sh
+RUN  echo "        cd /opt/workweek                                                       " >>/home/workweek-user/start-mongo.sh
+RUN  echo "        node server.js >& log.txt &                                            " >>/home/workweek-user/start-mongo.sh
+RUN  echo "else                                                                           " >>/home/workweek-user/start-mongo.sh
+RUN  echo "        echo \"/data/db/workweek.ns not exist.\" > /home/workweek-user/log.txt " >>/home/workweek-user/start-mongo.sh
+RUN  echo "fi                                                                             " >>/home/workweek-user/start-mongo.sh
+RUN  chmod +x /home/workweek-user/start-mongo.sh
+
+
+EXPOSE 80
+CMD supervisord -c /etc/supervisor.conf
