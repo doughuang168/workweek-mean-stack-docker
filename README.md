@@ -34,7 +34,7 @@ To see the dynamic nature of micro-service being used. I implement a simple Angu
 larJS directive as the micro-service consumer.
 
 
-You can see the demo [here](http://micro-service.cloudapp.net)
+You can see the demo [here](http://micro-service.cloudapp.net) or [here](http://ec2-54-213-146-147.us-west-2.compute.amazonaws.com)
 
 
 ## Dockerfile.base
