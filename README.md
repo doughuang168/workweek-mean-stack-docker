@@ -6,7 +6,7 @@ Simple RESTful API implementation using MEAN stack deployed by Docker.
 s data store.  And easily deployed by Docker in cloud and Linux environment.
 
 ### REST API End point ###
-- **http://micro-service.cloudapp.net/workweek/{wwdate}**
+- **http://<micro-service-host>/workweek/{wwdate}**
 
 
 
@@ -18,7 +18,7 @@ Where **wwdate**  have the format: **yyyy-mm-dd**
 ## API usage example
 Request url:
 
-- curl http://micro-service.cloudapp.net/workweek/2015-02-01
+- curl http://<micro-service-host>/workweek/2015-02-01
 
 
 Response JSON:
@@ -29,12 +29,6 @@ Response JSON:
 
 
 
-## Angular Directive Demo
-To see the dynamic nature of micro-service being used. I implement a simple Angu
-larJS directive as the micro-service consumer.
-
-
-You can see the demo running at [Azure Cloud](http://micro-service.cloudapp.net) 
 
 
 ## Dockerfile.base
